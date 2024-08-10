@@ -11,7 +11,9 @@ class BinaryReaderBE : BinaryReader {
     }
 
     public override int ReadInt32() {
-	return ReadInt32() - 0x7ffffff;
+	var data = base.ReadBytes(4);
+        if(IsLE) Array.Reverse(data);
+	return BitConverter.ToInt32(data) - 0x7ffffff;
     }
 
     public override UInt32 ReadUInt32() {
@@ -50,15 +52,15 @@ enum MotIdType {
     PartScaleY
 }
 
-public class MotParser {
+public partial class MotParser {
     public static MotFile Parse(Stream s) {
 	var r = new BinaryReaderBE(s);
 	var d = new MotFile();
 	int cmd = 0;
 	do {
-	    cmd = r.ReadByte();
-	    ExecuteCmd(cmd, r, d);
-	   }while(cmd != 255 && r.BaseStream.Position < r.BaseStream.Length); // eof
+		cmd = r.ReadByte();
+		ExecuteCmd(cmd, r, d);
+	}while(!(cmd == 255 || r.BaseStream.Position >= r.BaseStream.Length)); // eof
 	return d;
     }
 
@@ -86,13 +88,13 @@ public class MotParser {
 	    case MotIdType.PartPosDir: {
 		byte f, p;
 		f = r.ReadByte();p = r.ReadByte();
-		s.GetPart(p).Directions[f] = r.ReadInt32();
+		s.GetPart(p).Directions[f] = r.ReadInt32() / 100.0;
 		break;
 	    }
 	    case MotIdType.PartPosDis: {
 		byte f, p;
 		f = r.ReadByte();p = r.ReadByte();
-		s.GetPart(p).Distances[f] = r.ReadInt32();
+		s.GetPart(p).Distances[f] = r.ReadInt32() / 100.0;
 		break;
 	    }
 	    case MotIdType.PartAngle: {
@@ -110,13 +112,13 @@ public class MotParser {
 	    case MotIdType.PartScaleX: {
 		byte f, p;
 		f = r.ReadByte();p = r.ReadByte();
-		s.GetPart(p).ScaleX[f] = r.ReadInt16();
+		s.GetPart(p).ScaleX[f] = r.ReadInt16() / 100.0;
 		break;
 	    }
 	    case MotIdType.PartScaleY: {
 		byte f, p;
 		f = r.ReadByte();p = r.ReadByte();
-		s.GetPart(p).ScaleY[f] = r.ReadInt16();
+		s.GetPart(p).ScaleY[f] = r.ReadInt16() / 100.0;
 		break;
 	    }
 	}
@@ -126,12 +128,12 @@ public class MotParser {
 public class MotPartData {
     //    private class
     public int PartId {get; set;}
-    public Dictionary<int,int> Directions {get; set;} = new Dictionary<int,int>();
-    public Dictionary<int,int> Distances {get; set;} = new Dictionary<int,int>();
+    public Dictionary<int,double> Directions {get; set;} = new Dictionary<int,double>();
+    public Dictionary<int,double> Distances {get; set;} = new Dictionary<int,double>();
     public Dictionary<int,int> Angles {get; set;} = new Dictionary<int,int>();
     public Dictionary<int,int> Pictures {get; set;} = new Dictionary<int,int>();
-    public Dictionary<int,int> ScaleX {get; set;} = new Dictionary<int,int>();
-    public Dictionary<int,int> ScaleY {get; set;} = new Dictionary<int,int>();
+    public Dictionary<int,double> ScaleX {get; set;} = new Dictionary<int,double>();
+    public Dictionary<int,double> ScaleY {get; set;} = new Dictionary<int,double>();
 }
 
 public class MotFile {
